@@ -56,7 +56,7 @@ function logout() {
     clearSession();
 
     // Redirect to login page
-    window.location.href = "login.html";
+    window.location.href = "index.html";
   } catch (err) {
     console.error("Logout error:", err.message);
     alert("Failed to logout: " + err.message);
@@ -76,4 +76,5 @@ document.addEventListener("DOMContentLoaded", () => {
     logoutBtn.addEventListener("click", logout);
   }
 });
+
 
