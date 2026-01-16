@@ -32,7 +32,7 @@ function protectPage() {
   const session = getSession();
 
   if (!session) {
-    window.location.href = "login.html"; // redirect if not logged in
+    window.location.href = "index.html"; // redirect if not logged in
     return null;
   }
 
@@ -76,3 +76,4 @@ document.addEventListener("DOMContentLoaded", () => {
     logoutBtn.addEventListener("click", logout);
   }
 });
+
