@@ -114,7 +114,7 @@
 
     <!-- Email (can be labeled Badge ID if you want) -->
     <div class="input-group">
-      <input type="text" id="email" placeholder="Email">
+      <input type="text" id="email" placeholder="Email / Badge ID">
     </div>
 
     <div class="input-group">
@@ -187,7 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ================= LOGIN FUNCTION ================= */
   async function login() {
-    const email = document.getElementById("email").value.trim();
+    const email = document.getElementById("email").value.trim().toLowerCase();
     const password = document.getElementById("password").value.trim();
     const errorMsg = document.getElementById("error-msg");
     const loginBtn = document.querySelector("button[onclick='login()']");
@@ -216,10 +216,12 @@ document.addEventListener("DOMContentLoaded", () => {
       
       // Query admin_users table directly to find user by email or badgeid
       const { data: userData, error } = await supabaseClient
-        .from("admin_users")
-        .select("*")
-        .or(`email.eq.${email},badgeid.eq.${email}`)
-        .single();
+      .from("admin_users")
+      .select("*")
+      .ilike("email", email)
+      .single();
+
+
 
       console.log("DEBUG: Database query result:", { data: userData, error });
 
@@ -231,8 +233,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (!userData) {
-        console.log("DEBUG: No user found with email/badgeid:", email);
-        errorMsg.textContent = "No user found with this email/Badge ID. Please check your credentials.";
+        console.log("DEBUG: No user found with email:", email);
+        errorMsg.textContent = "No user found with this email. Please check your credentials.";
         errorMsg.style.display = "block";
         return;
       }
@@ -247,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
       if (userData.password !== encodedPassword) {
         console.log("DEBUG: Password mismatch");
-        errorMsg.textContent = "Invalid email/Badge ID or password. Please check your credentials.";
+        errorMsg.textContent = "Invalid email or password. Please check your credentials.";
         errorMsg.style.display = "block";
         return;
       }
@@ -316,4 +318,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
 </body>
 </html>
-
