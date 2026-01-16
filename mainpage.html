@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pH Monitoring System | Top Glove</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="navbar.js" defer></script>
+
+  <style>
+    /* ===== ORIGINAL STYLES ===== */
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif;}
+    body { background-color:#f5f7fa; color:#333; line-height:1.6; }
+    h1,h2,h3 { color:#003366; }
+    header { background-color:#003366; color:white; display:flex; justify-content:space-between; align-items:center; padding:20px 40px; flex-wrap:wrap;}
+    header .logo { display:flex; align-items:center; gap:15px; }
+    header .logo img { height:60px; }
+    header h1 { font-size:24px; }
+    nav ul li a.active { font-weight:700; border-bottom:2px solid #ffffff; padding-bottom:3px; }
+    nav ul { list-style:none; display:flex; gap:20px; }
+    nav ul li a { color:white; text-decoration:none; font-weight:500; transition:color 0.3s ease; }
+    nav ul li a:hover { color:#ffcc00; }
+    main { padding:20px 40px; }
+    .system-info .info-card { background-color:white; padding:20px; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); margin-bottom:30px; }
+    .overview { display:flex; justify-content:center; align-items:center; }
+    .current-ph-card { width:320px; background-color:white; padding:15px; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); text-align:left; }
+    .current-ph-card h2 { font-size:18px; margin-bottom:10px; text-align:center; }
+    .current-ph-card p { font-size:14px; margin-bottom:6px; }
+    .green-environment { background:#e6ffe6; padding:25px; border-radius:15px; box-shadow:0 4px 8px rgba(0,0,0,0.1); margin-top:40px; }
+    .impact-cards { display:flex; flex-wrap:wrap; gap:20px; }
+    .impact-card { background-color:#e6f2ff; flex:1 1 250px; padding:20px; border-radius:12px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    footer { background-color:#003366; color:white; text-align:center; padding:15px 0; margin-top:40px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img src="images/TGLOGO.png" alt="Logo">
+    <h1>pH Monitoring Summary</h1>
+  </div>
+
+ <nav>
+    <ul>
+      <li><a href="mainpage.html" class="active">Dashboard</a></li>
+      <li><a href="monitorph.html">Monitor pH</a></li>
+      <li><a href="createaccount.html" id="createAdminMenu" style="display:none;">Create Admin</a></li>
+      <li><a href="#" id="logoutBtn">Logout</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <section class="system-info">
+    <div class="info-card" style="text-align:center;">
+      <h2><i class="fa-solid fa-circle-info"></i> About This System</h2>
+      <p>
+        This pH Monitoring System is designed to record and monitor hourly pH readings 
+        for Top Glove. Operators can enter readings manually, and supervisors can view 
+        the latest values to maintain consistent quality control and environmental compliance.
+      </p>
+    </div>
+  </section>
+
+  <section class="overview">
+    <div class="current-ph-card">
+      <h2>Latest pH Record</h2>
+      <p><strong>Timestamp:</strong> <span id="latest-timestamp">-</span></p>
+      <p><strong>Factory:</strong> <span id="latest-factory">-</span></p>
+      <p><strong>Production Line:</strong> <span id="latest-line">-</span></p>
+      <p><strong>Tank:</strong> <span id="latest-tank">-</span></p>
+      <p><strong>Result 1:</strong> <span id="latest-result1">-</span></p>
+      <p><strong>Result 2:</strong> <span id="latest-result2">-</span></p>
+    </div>
+  </section>
+
+  <section class="sustainability-section green-environment">
+    <h2>🌱 Environmental Impact & Sustainability</h2>
+    <p>
+      Maintaining the correct pH levels plays a crucial role in ensuring environmental compliance and promoting sustainable operations within Top Glove. 
+      This monitoring system helps to minimize chemical waste, prevent water pollution, and support the company’s commitment to ISO 14001 Environmental Management Standards.
+    </p>
+    <div class="impact-cards">
+      <div class="impact-card">
+        <h3>💧 Water Quality</h3>
+        <p>Ensures discharge water remains within safe pH range, protecting local ecosystems.</p>
+      </div>
+      <div class="impact-card">
+        <h3>♻️ Chemical Efficiency</h3>
+        <p>Reduces excessive use of neutralizing agents, improving resource sustainability.</p>
+      </div>
+      <div class="impact-card">
+        <h3>🌍 Corporate Responsibility</h3>
+        <p>Supports Top Glove’s environmental goals and regulatory compliance initiatives.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>© 2025 Top Glove Corporation — pH Monitoring System</p>
+</footer>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const SUPABASE_URL = "https://agaungomzsupvdjfcded.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYXVuZ29tenN1cHZkamZjZGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMTc5NzcsImV4cCI6MjA4MDU5Mzk3N30.6PBQ9jVSIItUxKDvYPWGijmmJfv12YZMD2BxSsUJ7ng";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ===== Load Latest pH Record =====
+    async function loadLatestPH() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('ph_monitoring')
+          .select('*')
+          .order('recorded_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('Error fetching latest pH data:', error);
+          return;
+        }
+        
+        if (!data.length) return;
+
+        const latest = data[0];
+        document.getElementById("latest-timestamp").textContent =
+  new Date(latest.recorded_at)
+    .toISOString()
+    .replace("T", " ")
+    .slice(0, 19);
+        document.getElementById("latest-factory").textContent = latest.factory_name;
+        document.getElementById("latest-line").textContent = latest.production_line;
+        document.getElementById("latest-tank").textContent = latest.tank_name;
+        document.getElementById("latest-result1").textContent = latest.ph1;
+        document.getElementById("latest-result2").textContent = latest.ph2;
+      } catch (err) {
+        console.error('An unexpected error occurred:', err);
+      }
+    }
+
+    loadLatestPH();
+  });
+</script>
+</body>
+</html>

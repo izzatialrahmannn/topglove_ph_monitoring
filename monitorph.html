@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor pH | Top Glove</title>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="navbar.js" defer></script>
+
+<style>
+  /* Reset and base styles */
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
+  body { display:flex; flex-direction:column; min-height:100vh; background-color:#f5f7fa; color:#333; line-height:1.6; }
+  h1,h2,h3 { color:#003366; }
+
+  /* Header styles */
+  header { background-color:#003366; color:white; display:flex; justify-content:space-between; align-items:center; padding:20px 40px; flex-wrap:wrap; }
+  header .logo { display:flex; align-items:center; gap:15px; }
+  header .logo img { height:60px; }
+  header h1 { font-size:24px; }
+
+  nav ul { list-style:none; display:flex; gap:20px; }
+  nav ul li a { color:white; text-decoration:none; font-weight:500; transition:color 0.3s ease; }
+  nav ul li a:hover { color:#ffcc00; }
+  nav ul li a.active { font-weight:700; border-bottom:2px solid #ffffff; padding-bottom:3px; }
+
+  /* Main content */
+  main { flex:1; padding:20px 40px; }
+  .filters { margin-bottom:20px; display:flex; flex-wrap:wrap; gap:20px; align-items:center; }
+  .filters label { font-weight:500; }
+  select { padding:6px 10px; border-radius:6px; border:1px solid #ccc; font-size:14px; }
+
+  table { width:100%; border-collapse:collapse; background-color:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 8px rgba(0,0,0,0.1); }
+  th,td { padding:12px 15px; text-align:left; }
+  th { background-color:#003366; color:white; cursor:pointer; }
+  tr:nth-child(even) { background-color:#f2f7ff; }
+  tr:hover { background-color:#e6f2ff; }
+
+  footer { background-color:#003366; color:white; text-align:center; padding:15px 0; margin-top:auto; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">
+    <img src="images/TGLOGO.png" alt="Logo">
+    <h1>pH Monitoring Summary</h1>
+  </div>
+
+  <nav>
+    <ul>
+      <li><a href="mainpage.html">Dashboard</a></li>
+      <li><a href="monitorph.html" class="active">Monitor pH</a></li>
+      <li><a href="createaccount.html" id="createAdminMenu" style="display:none;">Create Admin</a></li>
+      <li><a href="#" id="logoutBtn">Logout</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <div class="filters">
+    <label>Factory:</label>
+    <select id="factoryFilter"><option value="">All</option></select>
+
+    <label>Production Line:</label>
+    <select id="lineFilter"><option value="">All</option></select>
+
+    <label>Search:</label>
+    <input type="text" id="searchInput" placeholder="Search by factory, line, or tank..." style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
+
+    <label>Sort by:</label>
+    <select id="sortSelect">
+      <option value="recorded_at-desc">Timestamp (Newest First)</option>
+      <option value="recorded_at-asc">Timestamp (Oldest First)</option>
+      <option value="factory_name-asc">Factory (A-Z)</option>
+      <option value="factory_name-desc">Factory (Z-A)</option>
+      <option value="production_line-asc">Production Line (A-Z)</option>
+      <option value="production_line-desc">Production Line (Z-A)</option>
+      <option value="ph1-asc">Result A (Lowest First)</option>
+      <option value="ph1-desc">Result A (Highest First)</option>
+      <option value="ph2-asc">Result B (Lowest First)</option>
+      <option value="ph2-desc">Result B (Highest First)</option>
+    </select>
+
+    <button id="clearFiltersBtn" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; cursor: pointer;">Clear Filters</button>
+  </div>
+
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th data-key="recorded_at">Timestamp</th>
+        <th data-key="factory_name">Factory</th>
+        <th data-key="production_line">Production Line</th>
+        <th data-key="tank_name">Tank</th>
+        <th data-key="ph1">Result A (pH)</th>
+        <th data-key="ph2">Result B (pH)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</main>
+
+<footer>
+  <p>© 2025 Top Glove Corporation — pH Monitoring System</p>
+</footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  function formatUTCTime(timestamp) {
+    const date = new Date(timestamp);
+
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = date.toLocaleString('en-GB', {
+      month: 'short',
+      timeZone: 'UTC'
+    });
+    const year = date.getUTCFullYear();
+
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+
+    return `${day} ${month} ${year} ${hours}:${minutes}:${seconds}`;
+  }
+
+  /* ================= SUPABASE CONFIG ================= */
+  const SUPABASE_URL = "https://agaungomzsupvdjfcded.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYXVuZ29tenN1cHZkamZjZGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMTc5NzcsImV4cCI6MjA4MDU5Mzk3N30.6PBQ9jVSIItUxKDvYPWGijmmJfv12YZMD2BxSsUJ7ng"; // Replace with your anon key
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Page protection and logout are now handled by navbar.js
+const FACTORY_LIST = [
+  "F2_M9",
+  "F3",
+  "F4",
+  "F5",
+  "F5B",
+  "F5C",
+  "F6",
+  "F7",
+  "F8A",
+  "F10",
+  "F11",
+  "F12",
+  "F13",
+  "F14",
+  "F18",
+  "F19_F20",
+  "F21",
+  "F22_F25",
+  "F23",
+  "F24",
+  "M26",
+  "F27",
+  "F29",
+  "F30",
+  "F31",
+  "F32",
+  "F33",
+  "F35A",
+  "F36",
+  "F37",
+  "F38",
+  "F39DD",
+  "F40",
+  "F41"
+];
+
+  /* ================= PH DATA ================= */
+  let originalData = [];
+
+  async function fetchPHData() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('ph_monitoring')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching pH data:', error);
+        return;
+      }
+
+      originalData = data || [];
+      filterData();
+      populateFilters(originalData);
+    } catch (err) {
+      console.error('An unexpected error occurred:', err);
+    }
+  }
+
+  function sortAndRenderData(data) {
+    const sortValue = document.getElementById("sortSelect").value;
+    const [sortKey, sortOrder] = sortValue.split('-');
+
+    const sortedData = [...data].sort((a, b) => {
+      const valA = a[sortKey];
+      const valB = b[sortKey];
+
+      if (valA < valB) {
+        return sortOrder === 'asc' ? -1 : 1;
+      }
+      if (valA > valB) {
+        return sortOrder === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    renderTable(sortedData);
+  }
+
+  function renderTable(data) {
+  const tbody = document.querySelector("#dataTable tbody");
+  tbody.innerHTML = "";
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No records found.</td></tr>`;
+    return;
+  }
+
+  data.forEach(row => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${formatUTCTime(row.recorded_at)}</td>
+        <td>${row.factory_name}</td>
+        <td>${row.production_line}</td>
+        <td>${row.tank_name}</td>
+        <td>${row.ph1}</td>
+        <td>${row.ph2}</td>
+      </tr>`;
+  });
+}
+
+
+  function populateFilters(data) {
+  const factoryFilter = document.getElementById("factoryFilter");
+  const lineFilter = document.getElementById("lineFilter");
+
+  // Populate factory filter ONLY ONCE using predefined list
+  if (factoryFilter.options.length <= 1) {
+    factoryFilter.innerHTML =
+      `<option value="">All</option>` +
+      FACTORY_LIST.map(f => `<option value="${f}">${f}</option>`).join("");
+  }
+
+  // Production line is still dynamic
+  const lines = new Set();
+  data.forEach(r => {
+    if (r.production_line) lines.add(r.production_line);
+  });
+
+  if (lineFilter.options.length <= 1) {
+    lineFilter.innerHTML =
+      `<option value="">All</option>` +
+      Array.from(lines).map(l => `<option value="${l}">${l}</option>`).join("");
+  }
+}
+
+  function filterData() {
+    const factory = document.getElementById("factoryFilter").value;
+    const line = document.getElementById("lineFilter").value;
+    const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+
+    let filtered = originalData;
+
+    if (factory) {
+      filtered = filtered.filter(d => d.factory_name === factory);
+    }
+    if (line) {
+      filtered = filtered.filter(d => d.production_line === line);
+    }
+    if (searchTerm) {
+      filtered = filtered.filter(d =>
+        (d.factory_name && d.factory_name.toLowerCase().includes(searchTerm)) ||
+        (d.production_line && d.production_line.toLowerCase().includes(searchTerm)) ||
+        (d.tank_name && d.tank_name.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    sortAndRenderData(filtered);
+  }
+
+  function clearFilters() {
+    document.getElementById("factoryFilter").value = "";
+    document.getElementById("lineFilter").value = "";
+    document.getElementById("searchInput").value = "";
+    document.getElementById("sortSelect").value = "recorded_at-desc";
+    filterData();
+  }
+
+  document.getElementById("factoryFilter").addEventListener("change", filterData);
+  document.getElementById("lineFilter").addEventListener("change", filterData);
+  document.getElementById("searchInput").addEventListener("input", filterData);
+  document.getElementById("sortSelect").addEventListener("change", filterData);
+  document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+  
+  // Logout is handled by navbar.js
+
+  fetchPHData();
+  setInterval(fetchPHData, 10000);
+});
+</script>
+
+</body>
+</html>

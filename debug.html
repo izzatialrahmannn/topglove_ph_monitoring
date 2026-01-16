@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database Debug | pH Monitoring System</title>
+  
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f5f7fa;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 { color: #003366; }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th { background-color: #003366; color: white; }
+    .credentials {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .credentials h3 {
+      margin-top: 0;
+      color: #003366;
+    }
+    .cred-item {
+      margin: 5px 0;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Database Debug Page</h1>
+    
+    <div id="connectionStatus" class="status info">Testing database connection...</div>
+    <div id="userCount" class="status info">Checking user count...</div>
+    <div id="userList" style="display: none;">
+      <h2>Admin Users in Database</h2>
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Full Name</th>
+            <th>Badge ID</th>
+            <th>Role ID</th>
+            <th>Password (encoded)</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+    
+    <div class="credentials">
+      <h3>Test Credentials Available:</h3>
+      <div class="cred-item">1. superadmin@company.com / SUPER001 / superadmin</div>
+      <div class="cred-item">2. admin@company.com / ADMIN001 / admin</div>
+      <div class="cred-item">3. john.doe@company.com / USER001 / password123</div>
+      <div class="cred-item">4. test.user@company.com / TEST123 / test123</div>
+    </div>
+    
+    <div class="credentials">
+      <h3>Base64 Password Verification:</h3>
+      <div class="cred-item">"superadmin" = c3VwZXJhZG1pbg==</div>
+      <div class="cred-item">"admin" = YWRtaW4=</div>
+      <div class="cred-item">"password123" = cGFzc3dvcmQxMjM=</div>
+      <div class="cred-item">"test123" = dGVzdDEyMw==</div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+      <a href="index.html">← Back to Login Page</a>
+    </div>
+  </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const { createClient } = supabase;
+  const supabaseClient = createClient(
+    "https://agaungomzsupvdjfcded.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYXVuZ29tenN1cHZkamZjZGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMTc5NzcsImV4cCI6MjA4MDU5Mzk3N30.6PBQ9jVSIItUxKDvYPWGijmmJfv12YZMD2BxSsUJ7ng"
+  );
+
+  async function testDatabaseConnection() {
+    try {
+      // Test connection
+      const { data, error } = await supabaseClient
+        .from("admin_users")
+        .select("id")
+        .limit(1);
+
+      const connectionStatus = document.getElementById("connectionStatus");
+      
+      if (error) {
+        connectionStatus.className = "status error";
+        connectionStatus.textContent = `❌ Database Connection Failed: ${error.message}`;
+        return false;
+      } else {
+        connectionStatus.className = "status success";
+        connectionStatus.textContent = "✅ Database Connection Successful";
+        return true;
+      }
+    } catch (err) {
+      const connectionStatus = document.getElementById("connectionStatus");
+      connectionStatus.className = "status error";
+      connectionStatus.textContent = `❌ Database Connection Error: ${err.message}`;
+      return false;
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      const { data, error } = await supabaseClient
+        .from("admin_users")
+        .select("*")
+        .order("id", { ascending: true });
+
+      const userCount = document.getElementById("userCount");
+      const userList = document.getElementById("userList");
+      const usersTableBody = document.getElementById("usersTableBody");
+
+      if (error) {
+        userCount.className = "status error";
+        userCount.textContent = `❌ Error loading users: ${error.message}`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        userCount.className = "status error";
+        userCount.textContent = "❌ No users found in database. Please run the test_users.sql script.";
+        return;
+      }
+
+      userCount.className = "status success";
+      userCount.textContent = `✅ Found ${data.length} users in database`;
+
+      // Populate table
+      usersTableBody.innerHTML = "";
+      data.forEach(user => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${user.id}</td>
+          <td>${user.email}</td>
+          <td>${user.full_name}</td>
+          <td>${user.badgeid}</td>
+          <td>${user.role_id}</td>
+          <td style="font-family: monospace; font-size: 12px;">${user.password}</td>
+        `;
+        usersTableBody.appendChild(row);
+      });
+
+      userList.style.display = "block";
+    } catch (err) {
+      const userCount = document.getElementById("userCount");
+      userCount.className = "status error";
+      userCount.textContent = `❌ Error: ${err.message}`;
+    }
+  }
+
+  // Run tests
+  testDatabaseConnection().then(connected => {
+    if (connected) {
+      loadUsers();
+    }
+  });
+});
+</script>
+
+</body>
+</html>

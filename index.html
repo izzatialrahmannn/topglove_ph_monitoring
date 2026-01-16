@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | pH Monitoring System</title>
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(360deg, #ffffff, #003366);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .page-title {
+      color: white;
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .login-container {
+      background-color: white;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .login-container h2 {
+      color: #003366;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      position: relative;
+      width: 100%;
+      margin: 12px 0;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 40px 12px 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    .toggle-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #666;
+      font-size: 18px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 6px;
+      background-color: #003366;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #ffcc00;
+      color: #003366;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+      display: none;
+      font-size: 14px;
+    }
+
+    .logo {
+      width: 200px;
+      margin-bottom: 30px;
+      opacity: 0.95;
+    }
+  </style>
+</head>
+
+<body>
+
+  <img src="images/TGLOGO.png" alt="Company Logo" class="logo">
+  <div class="page-title">PH MONITORING SYSTEM</div>
+
+  <div class="login-container">
+    <h2>Login</h2>
+
+    <!-- Email (can be labeled Badge ID if you want) -->
+    <div class="input-group">
+      <input type="text" id="email" placeholder="Email / Badge ID">
+    </div>
+
+    <div class="input-group">
+      <input type="password" id="password" placeholder="Password">
+      <i class="fa-solid fa-eye toggle-eye" id="togglePassword"></i>
+    </div>
+
+    <button onclick="login()">Login</button>
+    <p class="error" id="error-msg"></p>
+  </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  /* ================= SUPABASE CONFIG ================= */
+  const { createClient } = supabase;
+  const supabaseClient = createClient(
+    "https://agaungomzsupvdjfcded.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYXVuZ29tenN1cHZkamZjZGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMTc5NzcsImV4cCI6MjA4MDU5Mzk3N30.6PBQ9jVSIItUxKDvYPWGijmmJfv12YZMD2BxSsUJ7ng"
+  );
+
+  /* ================= PASSWORD TOGGLE ================= */
+  document.getElementById("togglePassword").onclick = function () {
+    const pw = document.getElementById("password");
+    if (pw.type === "password") {
+      pw.type = "text";
+      this.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+      pw.type = "password";
+      this.classList.replace("fa-eye-slash", "fa-eye");
+    }
+  };
+
+  /* ================= CUSTOM AUTH FUNCTIONS ================= */
+  
+  // Encode password using base64
+  function encodePassword(password) {
+    return btoa(password);
+  }
+
+  // Decode password from base64
+  function decodePassword(encodedPassword) {
+    try {
+      return atob(encodedPassword);
+    } catch {
+      return null;
+    }
+  }
+
+  // Set session in localStorage
+  function setSession(userData) {
+    localStorage.setItem('session', JSON.stringify({
+      email: userData.email,
+      full_name: userData.full_name,
+      badgeid: userData.badgeid,
+      role_id: userData.role_id,
+      loginTime: Date.now()
+    }));
+  }
+
+  // Get session from localStorage
+  function getSession() {
+    const session = localStorage.getItem('session');
+    return session ? JSON.parse(session) : null;
+  }
+
+  // Clear session
+  function clearSession() {
+    localStorage.removeItem('session');
+  }
+
+  /* ================= LOGIN FUNCTION ================= */
+  async function login() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorMsg = document.getElementById("error-msg");
+    const loginBtn = document.querySelector("button[onclick='login()']");
+
+    console.log("=== DEBUG: Login attempt started ===");
+    console.log("Input email:", email);
+    console.log("Input password length:", password.length);
+
+    errorMsg.style.display = "none";
+
+    // Input validation
+    if (!email || !password) {
+      errorMsg.textContent = "Please enter email and password.";
+      errorMsg.style.display = "block";
+      console.log("DEBUG: Validation failed - missing email or password");
+      return;
+    }
+
+    // Show loading state
+    const originalText = loginBtn.textContent;
+    loginBtn.textContent = "Signing in...";
+    loginBtn.disabled = true;
+
+    try {
+      console.log("DEBUG: Querying database for user...");
+      
+      // Query admin_users table directly to find user by email or badgeid
+      const { data: userData, error } = await supabaseClient
+        .from("admin_users")
+        .select("*")
+        .or(`email.eq.${email},badgeid.eq.${email}`)
+        .single();
+
+      console.log("DEBUG: Database query result:", { data: userData, error });
+
+      if (error) {
+        console.error("DEBUG: Database error:", error);
+        errorMsg.textContent = `Database error: ${error.message}`;
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      if (!userData) {
+        console.log("DEBUG: No user found with email/badgeid:", email);
+        errorMsg.textContent = "No user found with this email/Badge ID. Please check your credentials.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      console.log("DEBUG: User found:", userData.email, userData.badgeid);
+      
+      // Verify password
+      const encodedPassword = encodePassword(password);
+      console.log("DEBUG: Encoded input password:", encodedPassword);
+      console.log("DEBUG: Stored password:", userData.password);
+      console.log("DEBUG: Passwords match:", userData.password === encodedPassword);
+      
+      if (userData.password !== encodedPassword) {
+        console.log("DEBUG: Password mismatch");
+        errorMsg.textContent = "Invalid email/Badge ID or password. Please check your credentials.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      // ✅ Login successful
+      console.log("Login successful for user:", userData.email);
+      
+      // Set session in localStorage
+      setSession(userData);
+      
+      // Show success message briefly before redirecting
+      errorMsg.style.color = "green";
+      errorMsg.textContent = "Login successful! Redirecting...";
+      errorMsg.style.display = "block";
+      
+      setTimeout(() => {
+        window.location.href = "mainpage.html";
+      }, 500);
+      
+    } catch (error) {
+      console.error("DEBUG: Login error:", error);
+      errorMsg.style.color = "red";
+      errorMsg.textContent = `An unexpected error occurred: ${error.message}`;
+      errorMsg.style.display = "block";
+    } finally {
+      // Reset button state
+      loginBtn.textContent = originalText;
+      loginBtn.disabled = false;
+      errorMsg.style.color = "red"; // Reset to red for next error
+      console.log("=== DEBUG: Login attempt completed ===");
+    }
+  }
+  
+  // Make login function global
+  window.login = login;
+
+  /* ================= DATABASE CONNECTIVITY TEST ================= */
+  async function testDatabaseConnection() {
+    console.log("=== DEBUG: Testing database connection ===");
+    try {
+      // Test basic connection by querying admin_users table
+      const { data, error } = await supabaseClient
+        .from("admin_users")
+        .select("id")
+        .limit(1);
+
+      console.log("DEBUG: Database connection test:", { data, error });
+
+      if (error) {
+        console.error("DEBUG: Database connection failed:", error);
+        return false;
+      } else {
+        console.log("DEBUG: Database connection successful");
+        return true;
+      }
+    } catch (err) {
+      console.error("DEBUG: Database connection error:", err);
+      return false;
+    }
+  }
+
+  // Test database connection on page load
+  testDatabaseConnection();
+});
+</script>
+
+</body>
+</html>
