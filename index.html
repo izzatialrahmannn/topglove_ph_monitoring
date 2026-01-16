@@ -114,7 +114,7 @@
 
     <!-- Email (can be labeled Badge ID if you want) -->
     <div class="input-group">
-      <input type="text" id="email" placeholder="Email / Badge ID">
+      <input type="text" id="email" placeholder="Email">
     </div>
 
     <div class="input-group">
@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       console.log("DEBUG: Querying database for user...");
       
-      // Query admin_users table directly to find user by email or badgeid
+      // Query admin_users table directly to find user by email 
       const { data: userData, error } = await supabaseClient
       .from("admin_users")
       .select("*")
